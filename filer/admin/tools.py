@@ -86,7 +86,7 @@ def admin_url_params(request, params=None):
     pick_type = popup_pick_type(request)
     if pick_type:
         params['_pick'] = pick_type
-    if request.GET['CKEditor']:
+    if hasattr(request.GET, 'CKEditor'):
         params['CKEditor'] = request.GET['CKEditor']
         params['CKEditorFuncNum'] = request.GET['CKEditorFuncNum']
         params['langCode'] = request.GET['langCode']
