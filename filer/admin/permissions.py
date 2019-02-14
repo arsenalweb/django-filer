@@ -2,9 +2,8 @@
 from __future__ import absolute_import
 
 from django.contrib import admin
-from django.core.urlresolvers import reverse
 
-from ..utils.compatibility import LTE_DJANGO_1_7
+from ..utils.compatibility import reverse
 
 
 class PrimitivePermissionAwareModelAdmin(admin.ModelAdmin):
@@ -34,10 +33,6 @@ class PrimitivePermissionAwareModelAdmin(admin.ModelAdmin):
         """
         # Code from django ModelAdmin to determine changelist on the fly
         opts = obj._meta
-        if LTE_DJANGO_1_7:
-            model_name = opts.module_name
-        else:
-            model_name = opts.model_name
         return reverse('admin:%s_%s_changelist' %
-                       (opts.app_label, model_name),
+                       (opts.app_label, opts.model_name),
             current_app=self.admin_site.name)

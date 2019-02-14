@@ -1,4 +1,4 @@
-#-*- coding: utf-8 -*-
+# -*- coding: utf-8 -*-
 from __future__ import absolute_import, unicode_literals
 
 import json
@@ -14,13 +14,16 @@ from django.utils.six import StringIO
 from .. import settings as filer_settings
 from ..models import Folder
 from ..models.filemodels import File
-from ..models.imagemodels import Image
+from ..settings import FILER_IMAGE_MODEL
 from ..tests.helpers import (
     SettingsOverride,
     create_folder_structure,
     create_image,
     create_superuser,
 )
+from ..utils.loader import load_model
+
+Image = load_model(FILER_IMAGE_MODEL)
 
 
 class DumpDataTests(TestCase):
@@ -73,6 +76,13 @@ class DumpDataTests(TestCase):
         # Initialize the test data
         create_folder_structure(1,1)
         fileobj = self.create_filer_file(Folder.objects.all()[0])
+
+        self.assertEqual(Image.objects.count(), 0)
+        image = self.create_filer_image()
+        image.save()
+        image_size = image._width, image._height
+        self.assertEqual(Image.objects.count(), 1)
+
         jdata = StringIO()
 
         # Dump the current data
@@ -93,10 +103,15 @@ class DumpDataTests(TestCase):
 
         # Database data is restored
         self.assertEqual(Folder.objects.all().count(), 1)
-        self.assertEqual(File.objects.all().count(), 1)
+        self.assertEqual(File.objects.all().count(), 2)
         self.assertEqual(File.objects.all()[0].original_filename, self.image_name)
+        self.assertEqual(Image.objects.count(), 1)
 
         fileobj = File.objects.all()[0]
+        image = Image.objects.all()[0]
+        self.assertEqual(image._width, image_size[0])
+        self.assertEqual(image._height, image_size[1])
+
         complete = os.path.join(fileobj.file.storage.location, fileobj.path)
         # Filesystem data is not
         self.assertFalse(os.path.exists(complete))

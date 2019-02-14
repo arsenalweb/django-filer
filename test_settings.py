@@ -8,6 +8,7 @@ from tempfile import mkdtemp
 def gettext(s):
     return s
 
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 HELPER_SETTINGS = {
@@ -20,6 +21,7 @@ HELPER_SETTINGS = {
         'mptt',
         'filer',
         'filer.test_utils.test_app',
+        'filer.test_utils.extended_app',
     ],
     'LANGUAGE_CODE': 'en',
     'LANGUAGES': (
@@ -56,20 +58,18 @@ HELPER_SETTINGS = {
         'easy_thumbnails.processors.filters',
     ),
     'FILE_UPLOAD_TEMP_DIR': mkdtemp(),
-    'FILER_IMAGE_MODEL': False,
-    'TEMPLATE_DIRS': (os.path.join(BASE_DIR, 'django-filer', 'filer',
-                                   'test_utils', 'templates'),),
+    'TEMPLATE_DIRS': (os.path.join(BASE_DIR, 'django-filer', 'filer', 'test_utils', 'templates'),),
     'FILER_CANONICAL_URL': 'test-path/',
-
 }
 if os.environ.get('CUSTOM_IMAGE', False):
-    HELPER_SETTINGS['FILER_IMAGE_MODEL'] = os.environ.get('CUSTOM_IMAGE', False)
+    HELPER_SETTINGS['FILER_IMAGE_MODEL'] = os.environ.get('CUSTOM_IMAGE')
     HELPER_SETTINGS['INSTALLED_APPS'].append('filer.test_utils.custom_image')
 
 
 def run():
     from djangocms_helper import runner
     runner.run('filer')
+
 
 if __name__ == "__main__":
     run()

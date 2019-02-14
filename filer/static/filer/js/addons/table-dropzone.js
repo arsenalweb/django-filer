@@ -2,6 +2,13 @@
 // This script implements the dropzone settings
 'use strict';
 
+// as of Django 2.x we need to check where jQuery is
+var djQuery = window.$;
+
+if (django.jQuery) {
+    djQuery = django.jQuery;
+}
+
 /* globals Dropzone, Cl, django */
 (function ($) {
     $(function () {
@@ -198,8 +205,8 @@
                             return;
                         }
                         hasErrors = true;
-                        if (window.showError) {
-                            window.showError(file.name + ': ' + errorText);
+                        if (window.filerShowError) {
+                            window.filerShowError(file.name + ': ' + errorText);
                         }
                     }
                 });
@@ -213,4 +220,4 @@
             });
         }
     });
-})(django.jQuery);
+})(djQuery);

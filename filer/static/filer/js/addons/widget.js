@@ -1,7 +1,14 @@
 'use strict';
 /* global django */
 
-django.jQuery(function ($) {
+// as of Django 2.x we need to check where jQuery is
+var djQuery = window.$;
+
+if (django.jQuery) {
+    djQuery = django.jQuery;
+}
+
+djQuery(function ($) {
     var filer_clear = function () {
         var clearer = $(this);
         var container = clearer.closest('.filerFile');
@@ -16,7 +23,7 @@ django.jQuery(function ($) {
         input.val('');
         thumbnail.addClass(hiddenClass);
         thumbnail.parent('a').removeAttr('href');
-        addImageButton.removeClass(hiddenClass);
+        addImageButton.removeClass('related-lookup-change');
         dropzoneMessage.removeClass(hiddenClass);
         description.empty();
     };

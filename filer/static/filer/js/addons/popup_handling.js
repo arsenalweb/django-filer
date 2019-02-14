@@ -1,6 +1,13 @@
 'use strict';
 /* global django */
 
+// as of Django 2.x we need to check where jQuery is
+var djQuery = window.$;
+
+if (django.jQuery) {
+    djQuery = django.jQuery;
+}
+
 (function ($) {
     window.dismissPopupAndReload = function (win) {
         document.location.reload();
@@ -22,7 +29,7 @@
         image.attr('src', chosenThumbnailUrl).removeClass('hidden');
         descriptionText.text(chosenDescriptionTxt);
         clearer.removeClass('hidden');
-        lookup.addClass('hidden');
+        lookup.addClass('related-lookup-change');
         dropzoneMessage.addClass('hidden');
 
         if (oldId !== chosenId) {
@@ -43,4 +50,4 @@
         addFolderButton.addClass('hidden');
         win.close();
     };
-})(django.jQuery);
+})(djQuery);
