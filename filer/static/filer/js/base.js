@@ -7,13 +7,6 @@ var Cl = window.Cl || {};
 
 /* globals Mediator, django */
 
-// as of Django 2.x we need to check where jQuery is
-var djQuery = window.$;
-
-if (django.jQuery) {
-    djQuery = django.jQuery;
-}
-
 // mediator init
 Cl.mediator = new Mediator();
 
@@ -21,7 +14,7 @@ Cl.mediator = new Mediator();
     $(function () {
         var showErrorTimeout;
 
-        window.filerShowError = function (message) {
+        window.showError = function (message) {
             var messages = $('.messagelist');
             var header = $('#header');
             var filerErrorClass = 'js-filer-error';
@@ -207,4 +200,4 @@ Cl.mediator = new Mediator();
 
         }());
     });
-})(djQuery);
+})(django.jQuery);

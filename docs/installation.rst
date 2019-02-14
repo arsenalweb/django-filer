@@ -3,6 +3,9 @@
 Installation and Configuration
 ==============================
 
+.. note:: upgrading from 0.8.7? Checkout :ref:`upgrading`.
+
+
 Getting the latest release
 --------------------------
 
@@ -14,27 +17,41 @@ The easiest way to get ``django-filer`` is simply install it with `pip`_::
 Dependencies
 ------------
 
-* `Django`_ >= 1.8
+* `Django`_ >= 1.5
 * `django-mptt`_ >=0.6
-* `easy_thumbnails`_ >= 2.0
+* `easy_thumbnails`_ >= 1.0
 * `django-polymorphic`_ >= 0.7
-* `Pillow`_ >=2.3.0 (with JPEG and ZLIB support, `PIL`_ may work but is not supported)
+* `Pillow`_ >=2.3.0 (with JPEG and ZLIB support, `PIL`_ 1.1.7 is supported but not recommended)
 
 ``django.contrib.staticfiles`` is required.
+
+Please note, there are some compatibility constraints that we can not enforce
+through the `setup.py`. Here are the most important of them::
+
+    Django | django-polymorphic | django-mptt
+    ------ | ------------------ | -----------
+    1.5    | >=0.4.1            | >=0.6,<0.8
+    1.6    | >=0.5.4,           | >=0.6,<0.8
+    1.7    | >=0.5.6            | >=0.6,<0.8
+    1.8    | >=0.7              | >=0.7
 
 Please make sure you install `Pillow`_ with JPEG and  ZLIB support installed;
 for further information on Pillow installation and its binary dependencies,
 check `Pillow doc`_.
 
-`django-polymorphic`_ version depends on `Django`_ version:
 
-* for `Django`_ >=1.8,<1.11 use `django-polymorphic`_ 1.3.1
-* for `Django`_ >=1.11 use `django-polymorphic`_ >=2.0
+Django <1.7 and South
+.....................
+
+Django 1.7+ is supported together with the new migrations. For Django<1.7 South
+is still supported, you need at least South>=1.0 for South to find them though.
+
 
 Configuration
 -------------
 
-Add ``"filer"`` and related apps to your project's ``INSTALLED_APPS`` setting and run ``manage.py migrate``::
+Add ``"filer"`` and related apps to your project's ``INSTALLED_APPS`` setting and run ``manage.py syncdb``
+(or ``manage.py migrate`` if you're using `South`_ or Django migrations).::
 
     INSTALLED_APPS = [
         ...
@@ -44,7 +61,8 @@ Add ``"filer"`` and related apps to your project's ``INSTALLED_APPS`` setting an
         ...
     ]
 
-Note that `easy_thumbnails`_ also has database tables and needs a ``python manage.py migrate``.
+Note that `easy_thumbnails`_ also has database tables and needs a ``syncdb`` or
+``migrate``.
 
 For `easy_thumbnails`_ to support retina displays (recent MacBooks, iOS) add to settings.py::
 

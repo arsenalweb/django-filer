@@ -1,25 +1,20 @@
 # -*- coding: utf-8 -*-
+
 from __future__ import absolute_import, unicode_literals
 
 import hashlib
 import os
-from datetime import datetime
 
 from django.conf import settings
+from django.core import urlresolvers
 from django.core.files.base import ContentFile
 from django.db import models
-from django.utils import timezone
 from django.utils.translation import ugettext_lazy as _
 
 from . import mixins
 from .. import settings as filer_settings
 from ..fields.multistorage_file import MultiStorageFileField
-from ..utils.compatibility import (
-    NoReverseMatch,
-    is_authenticated,
-    python_2_unicode_compatible,
-    reverse,
-)
+from ..utils.compatibility import LTE_DJANGO_1_7, python_2_unicode_compatible
 from .foldermodels import Folder
 
 try:
@@ -44,51 +39,34 @@ class FileManager(PolymorphicManager):
         return [i for i in self.exclude(pk=file_obj.pk).filter(sha1=file_obj.sha1)]
 
 
-def is_public_default():
-    # not using this setting directly as `is_public` default value
-    # so that Django doesn't generate new migrations upon setting change
-    return filer_settings.FILER_IS_PUBLIC_DEFAULT
-
-
 @python_2_unicode_compatible
 class File(PolymorphicModel, mixins.IconsMixin):
     file_type = 'File'
     _icon = "file"
-    _file_data_changed_hint = None
-
-    folder = models.ForeignKey(
-        Folder,
-        verbose_name=_('folder'),
-        related_name='all_files',
-        null=True,
-        blank=True,
-        on_delete=models.CASCADE,
-    )
+    folder = models.ForeignKey(Folder, verbose_name=_('folder'), related_name='all_files',
+        null=True, blank=True)
     file = MultiStorageFileField(_('file'), null=True, blank=True, max_length=255)
-    _file_size = models.BigIntegerField(_('file size'), null=True, blank=True)
+    _file_size = models.IntegerField(_('file size'), null=True, blank=True)
 
     sha1 = models.CharField(_('sha1'), max_length=40, blank=True, default='')
 
     has_all_mandatory_data = models.BooleanField(_('has all mandatory data'), default=False, editable=False)
 
     original_filename = models.CharField(_('original filename'), max_length=255, blank=True, null=True)
-    name = models.CharField(max_length=255, default="", blank=True, verbose_name=_('name'))
-    description = models.TextField(null=True, blank=True, verbose_name=_('description'))
+    name = models.CharField(max_length=255, default="", blank=True,
+        verbose_name=_('name'))
+    description = models.TextField(null=True, blank=True,
+        verbose_name=_('description'))
 
-    owner = models.ForeignKey(
-        getattr(settings, 'AUTH_USER_MODEL', 'auth.User'),
+    owner = models.ForeignKey(getattr(settings, 'AUTH_USER_MODEL', 'auth.User'),
         related_name='owned_%(class)ss',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True,
-        verbose_name=_('owner'),
-    )
+        null=True, blank=True, verbose_name=_('owner'))
 
     uploaded_at = models.DateTimeField(_('uploaded at'), auto_now_add=True)
     modified_at = models.DateTimeField(_('modified at'), auto_now=True)
 
     is_public = models.BooleanField(
-        default=is_public_default,
+        default=filer_settings.FILER_IS_PUBLIC_DEFAULT,
         verbose_name=_('Permissions disabled'),
         help_text=_('Disable any permission checking for this '
                     'file. File will be publicly accessible '
@@ -103,35 +81,6 @@ class File(PolymorphicModel, mixins.IconsMixin):
     def __init__(self, *args, **kwargs):
         super(File, self).__init__(*args, **kwargs)
         self._old_is_public = self.is_public
-        self.file_data_changed(post_init=True)
-
-    def file_data_changed(self, post_init=False):
-        """
-        This is called whenever self.file changes (including initial set in __init__).
-        MultiStorageFileField has a custom descriptor which calls this function when
-        field value is changed.
-        Returns True if data related attributes were updated, False otherwise.
-        """
-        if self._file_data_changed_hint is not None:
-            data_changed_hint = self._file_data_changed_hint
-            self._file_data_changed_hint = None
-            if not data_changed_hint:
-                return False
-        if post_init and self._file_size and self.sha1:
-            # When called from __init__, only update if values are empty.
-            # This makes sure that nothing is done when instantiated from db.
-            return False
-        # cache the file size
-        try:
-            self._file_size = self.file.size
-        except:
-            self._file_size = None
-        # generate SHA1 hash
-        try:
-            self.generate_sha1()
-        except Exception:
-            self.sha1 = ''
-        return True
 
     def _move_file(self):
         """
@@ -158,8 +107,6 @@ class File(PolymorphicModel, mixins.IconsMixin):
         # open the file.
         src_file = src_storage.open(src_file_name)
         src_file.open()
-        # hint file_data_changed callback that data is actually unchanged
-        self._file_data_changed_hint = False
         self.file = dst_storage.save(dst_file_name,
             ContentFile(src_file.read()))
         src_storage.delete(src_file_name)
@@ -206,9 +153,21 @@ class File(PolymorphicModel, mixins.IconsMixin):
             pass
         elif issubclass(self.__class__, File):
             self._file_type_plugin_name = self.__class__.__name__
+        # cache the file size
+        # TODO: only do this if needed (depending on the storage backend the whole file will be downloaded)
+        try:
+            self._file_size = self.file.size
+        except:
+            pass
         if self._old_is_public != self.is_public and self.pk:
             self._move_file()
             self._old_is_public = self.is_public
+        # generate SHA1 hash
+        # TODO: only do this if needed (depending on the storage backend the whole file will be downloaded)
+        try:
+            self.generate_sha1()
+        except Exception:
+            pass
         super(File, self).save(*args, **kwargs)
     save.alters_data = True
 
@@ -247,7 +206,7 @@ class File(PolymorphicModel, mixins.IconsMixin):
         image. Return the string 'ALL' if the user has all rights.
         """
         user = request.user
-        if not is_authenticated(user):
+        if not user.is_authenticated():
             return False
         elif user.is_superuser:
             return True
@@ -266,11 +225,12 @@ class File(PolymorphicModel, mixins.IconsMixin):
         return text
 
     def get_admin_change_url(self):
-        return reverse(
-            'admin:{0}_{1}_change'.format(
-                self._meta.app_label,
-                self._meta.model_name,
-            ),
+        if LTE_DJANGO_1_7:
+            model_name = self._meta.module_name
+        else:
+            model_name = self._meta.model_name
+        return urlresolvers.reverse(
+            'admin:{0}_{1}_change'.format(self._meta.app_label, model_name),
             args=(self.pk,)
         )
 
@@ -281,7 +241,7 @@ class File(PolymorphicModel, mixins.IconsMixin):
         except AttributeError:
             # Django >1.6
             model_name = self._meta.model_name
-        return reverse(
+        return urlresolvers.reverse(
             'admin:{0}_{1}_delete'.format(self._meta.app_label, model_name,),
             args=(self.pk,))
 
@@ -297,22 +257,15 @@ class File(PolymorphicModel, mixins.IconsMixin):
         return r
 
     @property
-    def canonical_time(self):
-        if settings.USE_TZ:
-            return int((self.uploaded_at - datetime(1970, 1, 1, 1, tzinfo=timezone.utc)).total_seconds())
-        else:
-            return int((self.uploaded_at - datetime(1970, 1, 1, 1)).total_seconds())
-
-    @property
     def canonical_url(self):
         url = ''
         if self.file and self.is_public:
             try:
-                url = reverse('canonical', kwargs={
-                    'uploaded_at': self.canonical_time,
+                url = urlresolvers.reverse('canonical', kwargs={
+                    'uploaded_at': self.uploaded_at.strftime('%s'),
                     'file_id': self.id
                 })
-            except NoReverseMatch:
+            except urlresolvers.NoReverseMatch:
                 pass  # No canonical url, return empty string
         return url
 

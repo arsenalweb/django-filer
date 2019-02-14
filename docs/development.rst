@@ -1,7 +1,7 @@
 .. _development:
 
-Development
-===========
+Developement
+============
 
 Working on front-end
 --------------------

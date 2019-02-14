@@ -2,17 +2,16 @@
 from __future__ import absolute_import, unicode_literals
 
 import os
+from optparse import make_option
 
 from django.core.files import File as DjangoFile
-from django.core.management.base import BaseCommand
+from django.core.management.base import BaseCommand, NoArgsCommand
 
 from ...models.filemodels import File
 from ...models.foldermodels import Folder
-from ...settings import FILER_IMAGE_MODEL, FILER_IS_PUBLIC_DEFAULT
+from ...models.imagemodels import Image
+from ...settings import FILER_IS_PUBLIC_DEFAULT
 from ...utils.compatibility import upath
-from ...utils.loader import load_model
-
-Image = load_model(FILER_IMAGE_MODEL)
 
 
 class FileImporter(object):
@@ -80,7 +79,7 @@ class FileImporter(object):
         This method walk a directory structure and create the
         Folders and Files as they appear.
         """
-        path = path or self.path or ''
+        path = path or self.path
         base_folder = base_folder or self.base_folder
         # prevent trailing slashes and other inconsistencies on path.
         path = os.path.normpath(upath(path))
@@ -107,30 +106,27 @@ class FileImporter(object):
             print(('folder_created #%s / file_created #%s / ' + 'image_created #%s') % (self.folder_created, self.file_created, self.image_created))
 
 
-class Command(BaseCommand):
+class Command(NoArgsCommand):
     """
     Import directory structure into the filer ::
 
         manage.py --path=/tmp/assets/images
         manage.py --path=/tmp/assets/news --folder=images
     """
-    def add_arguments(self, parser):
-        parser.add_argument(
-            '--path',
+
+    option_list = BaseCommand.option_list + (
+        make_option('--path',
             action='store',
             dest='path',
-            required=True,
-            help='Import files located in the path into django-filer'
-        )
-
-        parser.add_argument(
-            '--folder',
+            default=False,
+            help='Import files located in the path into django-filer'),
+        make_option('--folder',
             action='store',
             dest='base_folder',
             default=False,
-            help='Specify the destination folder in which the directory structure should be imported'
-        )
+            help='Specify the destination folder in which the directory structure should be imported'),
+    )
 
-    def handle(self, *args, **options):
+    def handle_noargs(self, **options):
         file_importer = FileImporter(**options)
         file_importer.walker()

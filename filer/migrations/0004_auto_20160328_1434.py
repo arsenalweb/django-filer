@@ -15,6 +15,6 @@ class Migration(migrations.Migration):
         migrations.AlterField(
             model_name='image',
             name='subject_location',
-            field=models.CharField(blank=True, default='', max_length=64, verbose_name='subject location'),
+            field=models.CharField(blank=True, default=b'', max_length=64, verbose_name='subject location'),
         ),
     ]

@@ -9,7 +9,7 @@ from django.utils import six
 from django.utils.translation import ugettext_lazy as _
 
 from .. import settings as filer_settings
-from ..utils.compatibility import GTE_DJANGO_1_10, PILImage, is_authenticated
+from ..utils.compatibility import PILImage
 from ..utils.filer_easy_thumbnails import FilerThumbnailer
 from ..utils.pil_exif import get_exif_for_file
 from .filemodels import File
@@ -22,7 +22,7 @@ class BaseImage(File):
     DEFAULT_THUMBNAILS = {
         'admin_clipboard_icon': {'size': (32, 32), 'crop': True,
                                  'upscale': True},
-        'admin_sidebar_preview': {'size': (SIDEBAR_IMAGE_WIDTH, 0), 'upscale': True},
+        'admin_sidebar_preview': {'size': (SIDEBAR_IMAGE_WIDTH, 10000), 'upscale': True},
         'admin_directory_listing_icon': {'size': (48, 48),
                                          'crop': True, 'upscale': True},
         'admin_tiny_icon': {'size': (32, 32), 'crop': True, 'upscale': True},
@@ -38,11 +38,6 @@ class BaseImage(File):
 
     subject_location = models.CharField(_('subject location'), max_length=64, blank=True,
                                         default='')
-    file_ptr = models.OneToOneField(
-        to='filer.File', parent_link=True,
-        related_name='%(app_label)s_%(class)s_file',
-        on_delete=models.CASCADE,
-    )
 
     @classmethod
     def matches_file_type(cls, iname, ifile, request):
@@ -54,26 +49,15 @@ class BaseImage(File):
         iext = os.path.splitext(iname)[1].lower()
         return iext in ['.jpg', '.jpeg', '.png', '.gif']
 
-    def file_data_changed(self, post_init=False):
-        attrs_updated = super(BaseImage, self).file_data_changed(post_init=post_init)
-        if attrs_updated:
-            try:
-                try:
-                    imgfile = self.file.file
-                except ValueError:
-                    imgfile = self.file_ptr.file
-                imgfile.seek(0)
-                self._width, self._height = PILImage.open(imgfile).size
-                imgfile.seek(0)
-            except Exception:
-                if post_init is False:
-                    # in case `imgfile` could not be found, unset dimensions
-                    # but only if not initialized by loading a fixture file
-                    self._width, self._height = None, None
-        return attrs_updated
-
     def save(self, *args, **kwargs):
         self.has_all_mandatory_data = self._check_validity()
+        try:
+            # do this more efficient somehow?
+            self.file.seek(0)
+            self._width, self._height = PILImage.open(self.file).size
+        except Exception:
+            # probably the image is missing. nevermind.
+            pass
         super(BaseImage, self).save(*args, **kwargs)
 
     def _check_validity(self):
@@ -113,7 +97,7 @@ class BaseImage(File):
         image. Return the string 'ALL' if the user has all rights.
         """
         user = request.user
-        if not is_authenticated(user):
+        if not user.is_authenticated():
             return False
         elif user.is_superuser:
             return True
@@ -184,5 +168,3 @@ class BaseImage(File):
         verbose_name = _('image')
         verbose_name_plural = _('images')
         abstract = True
-        if GTE_DJANGO_1_10:
-            default_manager_name = 'objects'

@@ -4,14 +4,6 @@
 
 var Cl = window.Cl || {};
 /* globals Class, django */
-
-// as of Django 2.x we need to check where jQuery is
-var djQuery = window.$;
-
-if (django.jQuery) {
-    djQuery = django.jQuery;
-}
-
 (function ($) {
     Cl.FocalPoint = new Class({
         options: {
@@ -140,4 +132,4 @@ if (django.jQuery) {
             this.ratio = null;
         }
     });
-})(djQuery);
+})(django.jQuery);

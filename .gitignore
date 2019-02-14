@@ -33,5 +33,3 @@ share/
 testenv1
 node_modules/
 .python-version
-data
-local.sqlite

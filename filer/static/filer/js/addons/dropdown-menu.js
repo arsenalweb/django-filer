@@ -7,13 +7,6 @@
  * ======================================================================== */
 'use strict';
 
-// as of Django 2.x we need to check where jQuery is
-var djQuery = window.$;
-
-if (django.jQuery) {
-    djQuery = django.jQuery;
-}
-
 /* global django */
 (function ($) {
 
@@ -188,4 +181,4 @@ if (django.jQuery) {
         .on('keydown.bs.filer-dropdown.data-api', toggle, Dropdown.prototype.keydown)
         .on('keydown.bs.filer-dropdown.data-api', '.filer-dropdown-menu', Dropdown.prototype.keydown);
 
-})(djQuery);
+})(django.jQuery);

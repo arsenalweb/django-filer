@@ -6,14 +6,14 @@ import warnings
 from django import forms
 from django.contrib.admin.sites import site
 from django.contrib.admin.widgets import ForeignKeyRawIdWidget
-from django.core.exceptions import ObjectDoesNotExist
+from django.core.urlresolvers import reverse
 from django.db import models
 from django.template.loader import render_to_string
 from django.utils.http import urlencode
 from django.utils.safestring import mark_safe
 
 from ..models import Folder
-from ..utils.compatibility import LTE_DJANGO_1_8, reverse, truncate_words
+from ..utils.compatibility import LTE_DJANGO_1_7, truncate_words
 from ..utils.model_label import get_model_label
 
 
@@ -22,7 +22,7 @@ class AdminFolderWidget(ForeignKeyRawIdWidget):
     input_type = 'hidden'
     is_hidden = False
 
-    def render(self, name, value, attrs=None, renderer=None):
+    def render(self, name, value, attrs=None):
         obj = self.obj_for_value(value)
         css_id = attrs.get('id')
         css_id_folder = "%s_folder" % css_id
@@ -63,6 +63,7 @@ class AdminFolderWidget(ForeignKeyRawIdWidget):
             'noimg': 'filer/icons/nofile_32x32.png',
             'foldid': css_id_folder,
             'id': css_id,
+            'LTE_DJANGO_1_7': LTE_DJANGO_1_7,
         }
         html = render_to_string('admin/filer/widgets/admin_folder.html', context)
         return mark_safe(html)
@@ -74,11 +75,8 @@ class AdminFolderWidget(ForeignKeyRawIdWidget):
     def obj_for_value(self, value):
         try:
             key = self.rel.get_related_field().name
-            if LTE_DJANGO_1_8:
-                obj = self.rel.to._default_manager.get(**{key: value})
-            else:
-                obj = self.rel.model._default_manager.get(**{key: value})
-        except ObjectDoesNotExist:
+            obj = self.rel.to._default_manager.get(**{key: value})
+        except:
             obj = None
         return obj
 
@@ -128,10 +126,16 @@ class FilerFolderField(models.ForeignKey):
         # while letting the caller override them.
         defaults = {
             'form_class': self.default_form_class,
+            'rel': self.rel,
         }
-        try:
-            defaults['rel'] = self.remote_field
-        except AttributeError:
-            defaults['rel'] = self.rel
         defaults.update(kwargs)
         return super(FilerFolderField, self).formfield(**defaults)
+
+    def south_field_triple(self):
+        "Returns a suitable description of this field for South."
+        # We'll just introspect ourselves, since we inherit.
+        from south.modelsinspector import introspector
+        field_class = "django.db.models.fields.related.ForeignKey"
+        args, kwargs = introspector(self)
+        # That's our definition!
+        return (field_class, args, kwargs)

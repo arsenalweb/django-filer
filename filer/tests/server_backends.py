@@ -1,7 +1,8 @@
-# -*- coding: utf-8 -*-
+#-*- coding: utf-8 -*-
 from __future__ import absolute_import
 
 import os
+import shutil
 import time
 
 from django.core.files.uploadedfile import SimpleUploadedFile
@@ -89,6 +90,7 @@ class NginxServerTestCase(BaseServerBackendTestCase):
         # be useless)
         self.assertTrue(self.filer_file.file.closed)
 
+
     def test_missing_file(self):
         """
         this backend should not even notice if the file is missing.
@@ -118,6 +120,7 @@ class XSendfileServerTestCase(BaseServerBackendTestCase):
         # make sure the file object was never opened (otherwise the whole delegating to nginx would kinda
         # be useless)
         self.assertTrue(self.filer_file.file.closed)
+
 
     def test_missing_file(self):
         """

@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+#-*- coding: utf-8 -*-
 from __future__ import absolute_import, unicode_literals
 
 import os
@@ -12,18 +12,15 @@ from .. import settings as filer_settings
 from ..models.clipboardmodels import Clipboard
 from ..models.filemodels import File
 from ..models.foldermodels import Folder
+from ..models.imagemodels import Image
 from ..models.mixins import IconsMixin
-from ..settings import FILER_IMAGE_MODEL
 from ..test_utils import ET_2
-from ..utils.loader import load_model
 from .helpers import (
     create_clipboard_item,
     create_folder_structure,
     create_image,
     create_superuser,
 )
-
-Image = load_model(FILER_IMAGE_MODEL)
 
 try:
     from unittest import skipIf, skipUnless
@@ -251,7 +248,8 @@ class FilerApiTests(TestCase):
         """
         Check that the correct model is loaded and save / reload data
         """
-        def swapped_image_test(image):
+        image = self.create_filer_image()
+        if settings.FILER_IMAGE_MODEL:
             self.assertTrue(hasattr(image, 'extra_description'))
             self.assertFalse(hasattr(image, 'author'))
             image.extra_description = 'Extra'
@@ -259,8 +257,7 @@ class FilerApiTests(TestCase):
 
             reloaded = Image.objects.get(pk=image.pk)
             self.assertEqual(reloaded.extra_description, image.extra_description)
-
-        def unswapped_image_test(image):
+        else:
             self.assertFalse(hasattr(image, 'extra_description'))
             self.assertTrue(hasattr(image, 'author'))
             image.author = 'Me'
@@ -268,16 +265,6 @@ class FilerApiTests(TestCase):
 
             reloaded = Image.objects.get(pk=image.pk)
             self.assertEqual(reloaded.author, image.author)
-
-        test_image = self.create_filer_image()
-        try:
-            from filer.models import Image as DefaultImage
-            if DefaultImage._meta.swapped:
-                swapped_image_test(test_image)
-            else:
-                unswapped_image_test(test_image)
-        except ImportError:
-            swapped_image_test(test_image)
 
     def test_canonical_url(self):
         """

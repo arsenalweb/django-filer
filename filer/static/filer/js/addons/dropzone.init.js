@@ -3,19 +3,12 @@
 /* globals Dropzone, django */
 'use strict';
 
-// as of Django 2.x we need to check where jQuery is
-var djQuery = window.$;
-
-if (django.jQuery) {
-    djQuery = django.jQuery;
-}
-
 if (Dropzone) {
     Dropzone.autoDiscover = false;
 }
 
 /* globals Dropzone, django */
-djQuery(function ($) {
+django.jQuery(function ($) {
     var dropzoneTemplateSelector = '.js-filer-dropzone-template';
     var previewImageSelector = '.js-img-preview';
     var dropzoneSelector = '.js-filer-dropzone';
@@ -41,12 +34,8 @@ djQuery(function ($) {
             window.parent.CMS.API.Messages.open({
                 message: message
             });
-        } catch (e) {
-            if (window.filerShowError) {
-                window.filerShowError(message);
-            } else {
-                alert(message);
-            }
+        } catch (errorText) {
+            console.log(errorText);
         }
     };
 
@@ -90,7 +79,6 @@ djQuery(function ($) {
                 });
                 clearButton.on('click', function () {
                     dropzone.removeClass(objectAttachedClass);
-                    inputId.trigger('change');
                 });
             },
             maxfilesexceeded: function () {
@@ -99,7 +87,7 @@ djQuery(function ($) {
             drop: function () {
                 this.removeAllFiles(true);
                 fileChoose.hide();
-                lookupButton.addClass('related-lookup-change');
+                lookupButton.addClass(hiddenClass);
                 message.addClass(hiddenClass);
                 dropzone.removeClass(dragHoverClass);
                 dropzone.addClass(objectAttachedClass);
@@ -109,7 +97,6 @@ djQuery(function ($) {
                 if (file && file.status === 'success' && response) {
                     if (response.file_id) {
                         inputId.val(response.file_id);
-                        inputId.trigger('change');
                     }
                     if (response.thumbnail_180) {
                         if (isImage) {
@@ -121,7 +108,7 @@ djQuery(function ($) {
                     }
                 } else {
                     if (response && response.error) {
-                        showError(file.name + ': ' + response.error);
+                        window.showError(file.name + ': ' + response.error);
                     }
                     this.removeAllFiles(true);
                 }
@@ -141,9 +128,8 @@ djQuery(function ($) {
                 }
                 dropzone.removeClass(objectAttachedClass);
                 inputId.val('');
-                lookupButton.removeClass('related-lookup-change');
+                lookupButton.removeClass(hiddenClass);
                 message.removeClass(hiddenClass);
-                inputId.trigger('change');
             }
         });
     };
@@ -154,18 +140,9 @@ djQuery(function ($) {
             Dropzone.autoDiscover = false;
         }
         dropzones.each(createDropzone);
-        // window.__admin_utc_offset__ is used as canary to detect Django 1.8
-        // There is no way to feature detect the new behavior implemented in Django 1.9
-        if (!window.__admin_utc_offset__) {
-            $(document).on('formset:added', function (ev, row) {
-                var dropzones = $(row).find(dropzoneSelector);
-                dropzones.each(createDropzone);
-            });
-        } else {
-            $('.add-row a').on('click', function () {
-                var dropzones = $(dropzoneSelector);
-                dropzones.each(createDropzone);
-            });
-        }
+        $(document).on('formset:added', function (ev, row) {
+            var dropzones = $(row).find(dropzoneSelector);
+            dropzones.each(createDropzone);
+        });
     }
 });
